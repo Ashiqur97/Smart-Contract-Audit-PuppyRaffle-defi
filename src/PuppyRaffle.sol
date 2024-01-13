@@ -132,7 +132,9 @@ contract PuppyRaffle is ERC721, Ownable {
         uint256 prizePool = (totalAmountCollected * 80) / 100;
         uint256 fee = (totalAmountCollected * 20) / 100;
         totalFees = totalFees + uint64(fee);
-
+            //18446744073709551615
+            //1553255926290448384
+            //@audit unsafe cast of uint256 to uint64
         uint256 tokenId = totalSupply();
 
         // We use a different RNG calculate from the winnerIndex to determine rarity
