@@ -21,6 +21,7 @@ contract PuppyRaffle is ERC721, Ownable {
     uint256 public immutable entranceFee;
 
     address[] public players;
+     // e how long the raffle lasts
     uint256 public raffleDuration;
     uint256 public raffleStartTime;
     address public previousWinner;
@@ -77,12 +78,17 @@ contract PuppyRaffle is ERC721, Ownable {
     /// @notice duplicate entrants are not allowed
     /// @param newPlayers the list of players to enter the raffle
     function enterRaffle(address[] memory newPlayers) public payable {
+        // q were custom reverts a thing in 0.7.6 of solidity? 
+        // what if it's 0?
+        
         require(msg.value == entranceFee * newPlayers.length, "PuppyRaffle: Must send enough to enter raffle");
         for (uint256 i = 0; i < newPlayers.length; i++) {
+            // q what resets the players array?
             players.push(newPlayers[i]);
         }
 
         // Check for duplicates
+        //@audit DOS attack vector, if the array is too large, this will fail
         for (uint256 i = 0; i < players.length - 1; i++) {
             for (uint256 j = i + 1; j < players.length; j++) {
                 require(players[i] != players[j], "PuppyRaffle: Duplicate player");
@@ -98,6 +104,7 @@ contract PuppyRaffle is ERC721, Ownable {
         require(playerAddress == msg.sender, "PuppyRaffle: Only the player can refund");
         require(playerAddress != address(0), "PuppyRaffle: Player already refunded, or is not active");
 
+        //@audit Reentrancy 
         payable(msg.sender).sendValue(entranceFee);
 
         players[playerIndex] = address(0);
@@ -113,6 +120,8 @@ contract PuppyRaffle is ERC721, Ownable {
                 return i;
             }
         }
+        // q what if the player is at index 0?
+        //@audit if the player is at index 0, it will return 0 and player might think they are not active!
         return 0;
     }
 
@@ -123,6 +132,8 @@ contract PuppyRaffle is ERC721, Ownable {
     /// @dev we reset the active players array after the winner is selected
     /// @dev we send 80% of the funds to the winner, the other 20% goes to the feeAddress
     function selectWinner() external {
+        // q does this follow CEI?
+        // q are the duration & start time being set correct?
         require(block.timestamp >= raffleStartTime + raffleDuration, "PuppyRaffle: Raffle not over");
         require(players.length >= 4, "PuppyRaffle: Need at least 4 players");
         uint256 winnerIndex =
@@ -130,7 +141,10 @@ contract PuppyRaffle is ERC721, Ownable {
         address winner = players[winnerIndex];
         uint256 totalAmountCollected = players.length * entranceFee;
         uint256 prizePool = (totalAmountCollected * 80) / 100;
+
         uint256 fee = (totalAmountCollected * 20) / 100;
+        // e this the total fees the owner should be able to collect 
+        // @audit overflow
         totalFees = totalFees + uint64(fee);
             //18446744073709551615
             //1553255926290448384
@@ -158,8 +172,12 @@ contract PuppyRaffle is ERC721, Ownable {
     /// @notice this function will withdraw the fees to the feeAddress
     function withdrawFees() external {
         require(address(this).balance == uint256(totalFees), "PuppyRaffle: There are currently players active!");
+        // ....?
+        // q ok so, if the protocol has players  someone can't withdraw fees?
+        // @audit is it difficult to withdraw fees?
         uint256 feesToWithdraw = totalFees;
         totalFees = 0;
+        // q what if the feeAddress is a smart contract with a fallback that will fail?
         (bool success,) = feeAddress.call{value: feesToWithdraw}("");
         require(success, "PuppyRaffle: Failed to withdraw fees");
     }
