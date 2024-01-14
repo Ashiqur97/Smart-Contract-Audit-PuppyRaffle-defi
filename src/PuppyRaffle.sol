@@ -183,7 +183,7 @@ contract PuppyRaffle is ERC721, Ownable {
         // @audit is it difficult to withdraw fees?
         uint256 feesToWithdraw = totalFees;
         totalFees = 0;
-        // q what if the feeAddress is a smart contract with a fallback that will fail?
+        //slither-disable-next-line arbitrary-send-eth 
         (bool success,) = feeAddress.call{value: feesToWithdraw}("");
         require(success, "PuppyRaffle: Failed to withdraw fees");
     }
