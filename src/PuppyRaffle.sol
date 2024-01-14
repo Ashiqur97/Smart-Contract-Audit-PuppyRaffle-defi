@@ -62,6 +62,8 @@ contract PuppyRaffle is ERC721, Ownable {
     /// @param _raffleDuration the duration in seconds of the raffle
     constructor(uint256 _entranceFee, address _feeAddress, uint256 _raffleDuration) ERC721("Puppy Raffle", "PR") {
         entranceFee = _entranceFee;
+        //@audit-info check for zero address
+        // input validation 
         feeAddress = _feeAddress;
         raffleDuration = _raffleDuration;
         raffleStartTime = block.timestamp;
@@ -89,7 +91,9 @@ contract PuppyRaffle is ERC721, Ownable {
             players.push(newPlayers[i]);
         }
 
+
         // Check for duplicates
+        // @audit-gas uint256 playerLength = players.length;
         //@audit DOS attack vector, if the array is too large, this will fail
         for (uint256 i = 0; i < players.length - 1; i++) {
             for (uint256 j = i + 1; j < players.length; j++) {
@@ -110,6 +114,7 @@ contract PuppyRaffle is ERC721, Ownable {
         payable(msg.sender).sendValue(entranceFee);
 
         players[playerIndex] = address(0);
+        // @audit-low 
         emit RaffleRefunded(playerAddress);
     }
 
